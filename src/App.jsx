@@ -198,6 +198,66 @@ function buildReconstructedWithHighlights(sourceText, entries) {
   return { text: reconstructed, highlights }
 }
 
+function buildAsciiPreviewWithHighlights(text, highlights) {
+  if (!text) return { text: '', highlights: [] }
+
+  const chunks = []
+  let i = 0
+
+  while (i < text.length) {
+    let code
+    let start = i
+    let end
+
+    if (text[i] === '[') {
+      const closeIndex = text.indexOf(']', i + 1)
+      if (closeIndex !== -1) {
+        const tokenName = text.slice(i + 1, closeIndex)
+        if (Object.prototype.hasOwnProperty.call(TOKEN_TO_CONTROL_CODE, tokenName)) {
+          code = TOKEN_TO_CONTROL_CODE[tokenName]
+          end = closeIndex + 1
+          i = end
+        }
+      }
+    }
+
+    if (code === undefined) {
+      code = text.charCodeAt(i)
+      end = i + 1
+      i += 1
+    }
+
+    const matchingHighlight = highlights.find(
+      (highlight) => start >= highlight.start && end <= highlight.end
+    )
+
+    chunks.push({
+      code,
+      pairIndex: matchingHighlight ? matchingHighlight.pairIndex : undefined,
+    })
+  }
+
+  let asciiText = ''
+  const asciiHighlights = []
+
+  chunks.forEach((chunk, index) => {
+    const codeText = String(chunk.code)
+    const start = asciiText.length
+    asciiText += codeText
+    const end = asciiText.length
+
+    if (typeof chunk.pairIndex === 'number') {
+      asciiHighlights.push({ start, end, pairIndex: chunk.pairIndex })
+    }
+
+    if (index < chunks.length - 1) {
+      asciiText += ', '
+    }
+  })
+
+  return { text: asciiText, highlights: asciiHighlights }
+}
+
 function extractVariablesAndNumbers(text) {
   const lines = text.split(/\r?\n/)
   const result = {}
@@ -265,6 +325,7 @@ export default function App() {
   const [selectedPropertyText, setSelectedPropertyText] = useState('')
   const propertySourceRef = useRef(null)
   const propertyOutputRef = useRef(null)
+  const propertyAsciiRef = useRef(null)
 
   function showToast(message) {
     setToast(message)
@@ -425,10 +486,19 @@ export default function App() {
     showToast('Property text file downloaded')
   }
 
+  function downloadPropertyAscii() {
+    const reconstructed = applyPropertyEditsToSource(propertySourceText, propertyEntries)
+    if (!reconstructed) return
+    const asciiCodes = textToAsciiCodes(reconstructed).join(', ')
+    downloadFile(asciiCodes, 'property_editor_ascii_values.txt', 'text/plain;charset=utf-8')
+    showToast('Property ASCII file downloaded')
+  }
+
   function scrollPropertyPairIntoView(pairIndex) {
     const selector = `[data-pair-index="${pairIndex}"]`
     const sourceNode = propertySourceRef.current?.querySelector(selector)
     const outputNode = propertyOutputRef.current?.querySelector(selector)
+    const asciiNode = propertyAsciiRef.current?.querySelector(selector)
 
     function scrollWithinContainer(container, node) {
       if (!container || !node) return
@@ -442,6 +512,7 @@ export default function App() {
 
     scrollWithinContainer(propertySourceRef.current, sourceNode)
     scrollWithinContainer(propertyOutputRef.current, outputNode)
+    scrollWithinContainer(propertyAsciiRef.current, asciiNode)
   }
 
   function downloadTextToAsciiPreview() {
@@ -497,6 +568,11 @@ export default function App() {
   const propertySourceHighlights = buildSourceHighlights(propertySourceText, propertyEntries)
   const propertyReconstructedResult = buildReconstructedWithHighlights(propertySourceText, propertyEntries)
   const propertyReconstructedPreview = propertyReconstructedResult.text
+  const propertyAsciiResult = buildAsciiPreviewWithHighlights(
+    propertyReconstructedPreview,
+    propertyReconstructedResult.highlights
+  )
+  const propertyAsciiPreview = propertyAsciiResult.text
 
   function renderHighlightedText(text, highlights) {
     if (!text) {
@@ -847,7 +923,7 @@ export default function App() {
           <span className="font-semibold text-slate-900">Properties in list:</span> {propertyEntries.length}
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Input preview</h3>
             <div
@@ -880,6 +956,16 @@ export default function App() {
               className="mt-2 max-h-[18.5rem] overflow-auto rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm leading-6 text-slate-900 whitespace-pre-wrap break-words"
             >
               {renderHighlightedText(propertyReconstructedPreview, propertyReconstructedResult.highlights)}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Reconstructed ASCII preview</h3>
+            <div
+              ref={propertyAsciiRef}
+              aria-label="Property editor ASCII preview"
+              className="mt-2 max-h-[18.5rem] overflow-auto rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm leading-6 text-slate-900 whitespace-pre-wrap break-words"
+            >
+              {renderHighlightedText(propertyAsciiPreview, propertyAsciiResult.highlights)}
             </div>
           </div>
         </div>
@@ -940,7 +1026,14 @@ export default function App() {
             disabled={!hasPropertyEntries}
             className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            Convert to Text
+            Save to Text
+          </button>
+          <button
+            onClick={downloadPropertyAscii}
+            disabled={!hasPropertyEntries}
+            className="ml-3 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:text-slate-400"
+          >
+            Save to ASCII
           </button>
           <button
             onClick={savePropertiesJson}
