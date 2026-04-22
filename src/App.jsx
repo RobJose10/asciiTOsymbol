@@ -264,6 +264,7 @@ export default function App() {
   const [propertyEntries, setPropertyEntries] = useState([])
   const [selectedPropertyText, setSelectedPropertyText] = useState('')
   const propertySourceRef = useRef(null)
+  const propertyOutputRef = useRef(null)
 
   function showToast(message) {
     setToast(message)
@@ -424,6 +425,25 @@ export default function App() {
     showToast('Property text file downloaded')
   }
 
+  function scrollPropertyPairIntoView(pairIndex) {
+    const selector = `[data-pair-index="${pairIndex}"]`
+    const sourceNode = propertySourceRef.current?.querySelector(selector)
+    const outputNode = propertyOutputRef.current?.querySelector(selector)
+
+    function scrollWithinContainer(container, node) {
+      if (!container || !node) return
+      const containerRect = container.getBoundingClientRect()
+      const nodeRect = node.getBoundingClientRect()
+      const currentTop = container.scrollTop
+      const deltaToTop = nodeRect.top - containerRect.top
+      const targetTop = currentTop + deltaToTop - container.clientHeight / 2 + node.clientHeight / 2
+      container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+    }
+
+    scrollWithinContainer(propertySourceRef.current, sourceNode)
+    scrollWithinContainer(propertyOutputRef.current, outputNode)
+  }
+
   function downloadTextToAsciiPreview() {
     if (!textToAsciiCodesPreview.length) return
     const separator = textToAsciiFormat === 'comma' ? ', ' : ' '
@@ -501,6 +521,7 @@ export default function App() {
       nodes.push(
         <span
           key={`hl-${index}-${highlight.start}`}
+          data-pair-index={highlight.pairIndex}
           className={`${styleSet.highlight} rounded px-0.5`}
         >
           {text.slice(highlight.start, highlight.end)}
@@ -805,7 +826,7 @@ export default function App() {
             onChange={handlePropertyFile}
             className="sr-only"
           />
-          <span className="text-xs text-slate-500">Then highlight a snippet like MountNameStrPropertyFrankie and click Add Property.</span>
+          <span className="text-xs text-slate-500">Then highlight a snippet like MountNameStrPropertyFrankie Stein and click Add Property.</span>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -854,6 +875,7 @@ export default function App() {
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Reconstructed output preview</h3>
             <div
+              ref={propertyOutputRef}
               aria-label="Property editor output preview"
               className="mt-2 max-h-[18.5rem] overflow-auto rounded-xl border border-slate-200 bg-white p-3 font-mono text-sm leading-6 text-slate-900 whitespace-pre-wrap break-words"
             >
@@ -890,12 +912,14 @@ export default function App() {
                   type="text"
                   value={entry.name}
                   onChange={(e) => updatePropertyEntry(entry.id, 'name', e.target.value)}
+                  onFocus={() => scrollPropertyPairIntoView(index)}
                   aria-label={`Property name ${index + 1}`}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                 />
                 <textarea
                   value={entry.value}
                   onChange={(e) => updatePropertyEntry(entry.id, 'value', e.target.value)}
+                  onFocus={() => scrollPropertyPairIntoView(index)}
                   rows={2}
                   aria-label={`Property value ${index + 1}`}
                   className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
