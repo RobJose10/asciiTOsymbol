@@ -317,6 +317,7 @@ export default function App() {
   const [outputText, setOutputText] = useState('')
   const [toast, setToast] = useState('')
   const [activeTab, setActiveTab] = useState('numbers-to-text')
+  const [partyMode, setPartyMode] = useState(false)
   const [textToAsciiFormat, setTextToAsciiFormat] = useState('space')
   const [textToAsciiSource, setTextToAsciiSource] = useState('')
   const [textToAsciiCodesPreview, setTextToAsciiCodesPreview] = useState([])
@@ -331,6 +332,12 @@ export default function App() {
     setToast(message)
     window.clearTimeout(showToast._timer)
     showToast._timer = window.setTimeout(() => setToast(''), 2200)
+  }
+
+  function activatePartyTime() {
+    setPartyMode(true)
+    window.clearTimeout(activatePartyTime._timer)
+    activatePartyTime._timer = window.setTimeout(() => setPartyMode(false), 3000)
   }
 
   function handleFile(e) {
@@ -615,7 +622,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className={`mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8 ${partyMode ? 'party-time-active' : ''}`}>
       <header className="mb-8">
         <p className="mb-2 inline-flex rounded-full bg-accentSoft px-3 py-1 text-xs font-semibold tracking-[0.12em] text-teal-900 uppercase">
           Productivity Toolkit
@@ -631,8 +638,9 @@ export default function App() {
         </p>
       </header>
 
-      <div className="card mb-6 p-2" role="tablist" aria-label="Conversion modes">
-        <button
+      <div className="card mb-6 flex items-center justify-between p-2" role="tablist" aria-label="Conversion modes">
+        <div className="flex items-center">
+          <button
           role="tab"
           aria-selected={activeTab === 'numbers-to-text'}
           aria-controls="numbers-to-text-panel"
@@ -645,8 +653,8 @@ export default function App() {
           }`}
         >
           ASCII to Text
-        </button>
-        <button
+          </button>
+          <button
           role="tab"
           aria-selected={activeTab === 'text-to-ascii'}
           aria-controls="text-to-ascii-panel"
@@ -659,8 +667,8 @@ export default function App() {
           }`}
         >
           Text to ASCII
-        </button>
-        <button
+          </button>
+          <button
           role="tab"
           aria-selected={activeTab === 'property-editor'}
           aria-controls="property-editor-panel"
@@ -673,6 +681,16 @@ export default function App() {
           }`}
         >
           Property Editor
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-label="Party time"
+          title="Party time"
+          onClick={activatePartyTime}
+          className="rounded-full bg-transparent opacity-0 transition hover:opacity-20 focus:opacity-20 party-time-button"
+        >
+          .
         </button>
       </div>
 
